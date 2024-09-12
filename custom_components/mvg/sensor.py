@@ -1,4 +1,5 @@
 """Support for departure information for public transport in Munich."""
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -72,6 +73,7 @@ def setup_platform(
         )
     add_entities(sensors, True)
 
+
 class MVGSensor(SensorEntity):
     """Implementation of an MVG sensor."""
 
@@ -90,9 +92,7 @@ class MVGSensor(SensorEntity):
         """Initialize the sensor."""
         self._station = station
         self._name = name
-        self.data = MVGData(
-            station, destinations, lines, products, timeoffset, number
-        )
+        self.data = MVGData(station, destinations, lines, products, timeoffset, number)
         self._state = None
         self._icon = NONE_ICON
 
@@ -137,6 +137,7 @@ class MVGSensor(SensorEntity):
             self._state = self.data.departures[0].get("time_in_mins", "-")
             self._icon = self.data.departures[0]["icon"]
 
+
 def _get_minutes_until_departure(departure_time: int) -> int:
     """Calculate the time difference in minutes between the current time and a given departure time.
     Args:
@@ -149,6 +150,7 @@ def _get_minutes_until_departure(departure_time: int) -> int:
     time_difference = (departure_datetime - current_time).total_seconds()
     minutes_difference = int(time_difference / 60.0)
     return minutes_difference
+
 
 class MVGData:
     """Pull data from the mvg.de web page."""
@@ -209,7 +211,7 @@ class MVGData:
 
             # now select the relevant data
             _nextdep = {}
-            for k in ("destination", "line", "type", "cancelled", "icon"):
+            for k in ("destination", "line", "type", "cancelled", "icon", "platform"):
                 _nextdep[k] = _departure.get(k, "")
             _nextdep["time_in_mins"] = time_to_departure
             self.departures.append(_nextdep)
