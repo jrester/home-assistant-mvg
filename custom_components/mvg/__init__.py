@@ -10,7 +10,7 @@ from homeassistant.helpers import aiohttp_client
 
 from mvg import MvgApi, TransportType, MvgApiError
 
-from .const import CONF_STATION_ID, CONF_TIME_OFFSET, UPDATE_INTERVAL
+from .const import CONF_STATION_ID, CONF_TIME_OFFSET, UPDATE_INTERVAL, CONF_LIMIT
 
 PLATFORMS = [Platform.SENSOR]
 
@@ -26,6 +26,7 @@ class MvgDataManager(DataUpdateCoordinator):
         config_entry: ConfigEntry,
         mvg_api: MvgApi,
         timeoffset: int,
+        limit: int,
     ):
         """Initialize the sensor."""
         super().__init__(
@@ -38,12 +39,13 @@ class MvgDataManager(DataUpdateCoordinator):
         self._mvg_api = mvg_api
         self.station_id = mvg_api.station_id
         self.timeoffset = timeoffset
+        self.limit = limit
 
     async def _async_update_data(self):
         """Update the connection data."""
         try:
             departures = await self._mvg_api.departures_async(
-                offset=self.timeoffset,
+                offset=self.timeoffset, limit=self.limit
             )
             return departures
         except MvgApiError as exp:
@@ -53,11 +55,12 @@ class MvgDataManager(DataUpdateCoordinator):
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     station_id = entry.data[CONF_STATION_ID]
     timeoffset = entry.data[CONF_TIME_OFFSET]
+    limit = entry.data[CONF_LIMIT]
 
     client_session = aiohttp_client.async_get_clientsession(hass)
     mvg_api = await MvgApi.create_for_station_async(station_id, client_session)
 
-    coordinator = MvgDataManager(hass, entry, mvg_api, timeoffset)
+    coordinator = MvgDataManager(hass, entry, mvg_api, timeoffset, limit)
 
     await coordinator.async_config_entry_first_refresh()
 

@@ -25,6 +25,7 @@ from .const import (
     CONF_STATION_NAME,
     CONF_STATION_ID,
     CONF_TIME_OFFSET,
+    CONF_LIMIT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
     _title: str
     _station_metadata: dict[str, Any]
     _timeoffset: int
+    _limit: int
 
     async def async_step_user(self, user_input: dict[str, Any] | None):
         errors: dict[str, str] | None = {}
@@ -56,6 +58,7 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
                 self._title = f"{station_metadata.name} ({station_metadata.station_id})"
                 self._station_metadata = station_metadata
                 self._timeoffset = timeoffset
+                self._limit = user_input[CONF_LIMIT]
                 return await self.async_step_select_lines()
 
         return self.async_show_form(
@@ -64,6 +67,7 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_STATION_NAME): str,
                     vol.Optional(CONF_TIME_OFFSET, default=5): int,
+                    vol.Optional(CONF_LIMIT, default=10): int,
                 }
             ),
             errors=errors,
@@ -76,7 +80,8 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
                 data={
                     CONF_STATION_ID: self._station_metadata.station_id,
                     CONF_STATION_NAME: self._station_metadata.name,
-                    CONF_TIME_OFFSET: 5,
+                    CONF_TIME_OFFSET: self._timeoffset,
+                    CONF_LIMIT: self._limit,
                 },
                 options=user_input,
             )
