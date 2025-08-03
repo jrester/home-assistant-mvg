@@ -12,7 +12,7 @@ from homeassistant.config_entries import (
     ConfigFlow,
     ConfigEntry,
     SubentryFlowResult,
-    OptionsFlowWithReload,
+    OptionsFlow,
 )
 from homeassistant.const import CONF_IP_ADDRESS, CONF_DEVICE_ID, CONF_PORT
 import voluptuous as vol
@@ -119,7 +119,7 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
         return MvgOptionsFlowHandler()
 
 
-class MvgOptionsFlowHandler(OptionsFlowWithReload):
+class MvgOptionsFlowHandler(OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
