@@ -1,0 +1,14 @@
+[project]
+name = "home-assistant-mvg"
+version = "0.1.0"
+description = "Home-Assistant Integration for MVG"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "mvg>=1.6.0",
+]
+
+[dependency-groups]
+dev = [
+    "homeassistant-stubs>=2026.2.3",
+]

@@ -6,6 +6,6 @@
   "documentation": "https://www.home-assistant.io/integrations/mvg",
   "iot_class": "cloud_polling",
   "loggers": ["MVG"],
-  "requirements": ["mvg==1.4.0"],
+  "requirements": ["mvg==1.6.0"],
   "config_flow": true
 }

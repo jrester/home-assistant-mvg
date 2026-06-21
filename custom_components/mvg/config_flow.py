@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 from typing import Any
 
@@ -7,17 +8,16 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.config_entries import (
     ConfigFlow,
     ConfigEntry,
     SubentryFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_IP_ADDRESS, CONF_DEVICE_ID, CONF_PORT
 import voluptuous as vol
 
-from mvg import MvgApi
+from mvg import MvgApi, TransportType
 
 from .const import (
     CONF_LINES,
@@ -40,7 +40,7 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
     _timeoffset: int
     _limit: int
 
-    async def async_step_user(self, user_input: dict[str, Any] | None):
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] | None = {}
         if user_input is not None:
             timeoffset = user_input[CONF_TIME_OFFSET]
@@ -53,9 +53,8 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_STATION_NAME] = (
                     f"Station {station_name} could not be found!"
                 )
-
-            if not errors:
-                self._title = f"{station_metadata.name} ({station_metadata.station_id})"
+            elif not errors:
+                self._title = f"{station_metadata['name']} ({station_metadata['id']})"
                 self._station_metadata = station_metadata
                 self._timeoffset = timeoffset
                 self._limit = user_input[CONF_LIMIT]
@@ -78,27 +77,18 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title=self._title,
                 data={
-                    CONF_STATION_ID: self._station_metadata.station_id,
-                    CONF_STATION_NAME: self._station_metadata.name,
+                    CONF_STATION_ID: self._station_metadata["id"],
+                    CONF_STATION_NAME: self._station_metadata["name"],
                     CONF_TIME_OFFSET: self._timeoffset,
                     CONF_LIMIT: self._limit,
                 },
                 options=user_input,
             )
 
-        mvg_api = await MvgApi.create_for_station_async(
-            self._station_metadata.station_id
-        )
-        lines = await mvg_api.lines_at_station_async()
+        station_id = self._station_metadata["id"]
+        selectable_lines = await _get_select_options_lines(station_id)
 
-        selectable_lines = [
-            SelectOptionDict(
-                value=line_info.name,
-                label=f"{line_info.name} ({line_info.transport_type.value[0]})",
-            )
-            for line_info in lines
-            if not line_info.sev
-        ]
+        print(selectable_lines)
 
         return self.async_show_form(
             step_id="select_lines",
@@ -132,20 +122,11 @@ class MvgOptionsFlowHandler(OptionsFlow):
             _LOGGER.warning("Optiosn for MVG: %s", user_input)
             return self.async_create_entry(data=user_input)
 
-        mvg_api = MvgApi(self.config_entry.data[CONF_STATION_ID])
-        lines = await mvg_api.lines_at_station_async()
-
-        selectable_lines = [
-            SelectOptionDict(
-                value=line_info.name,
-                label=f"{line_info.name} ({line_info.transport_type.value[0]})",
-            )
-            for line_info in lines
-            if not line_info.sev
-        ]
+        station_id = self.config_entry.data[CONF_STATION_ID]
+        selectable_lines = await _get_select_options_lines(station_id)
 
         return self.async_show_form(
-            step_id="init",
+            step_id="select_lines",
             data_schema=self.add_suggested_values_to_schema(
                 vol.Schema(
                     {
@@ -162,3 +143,31 @@ class MvgOptionsFlowHandler(OptionsFlow):
                 self.config_entry.options,
             ),
         )
+
+
+async def _get_select_options_lines(station_id: str) -> list[SelectOptionDict]:
+    lines = await MvgApi.lines_async(station_id)
+    # The MVG lines result might contain multiple entries per line (e.g., S-BAHN and Bus SEV).
+    # Since we later on, only filter by line name (S3, S1, etc.) we can safely merge them.
+    # use `set` for the line labels, since MVG API returns all entries two times...
+    deduplicated_lines = defaultdict(set)
+    for line_info in lines:
+        line_name = line_info["label"]
+
+        # Avoid confusion when a train line is also marked as Bus due to SEV being potentially available.
+        sev_label = " SEV" if line_info["sev"] else ""
+        transport_type_label = TransportType[line_info["transportType"]].value[0]
+        line_label = f"{transport_type_label}{sev_label}"
+
+        deduplicated_lines[line_name].add(line_label)
+
+    select_options = []
+    for line_name, line_label_parts in deduplicated_lines.items():
+        option_label = f"{line_name} ({', '.join(line_label_parts)})"
+        select_option = SelectOptionDict(
+            value=line_name,
+            label=option_label,
+        )
+        select_options.append(select_option)
+
+    return select_options

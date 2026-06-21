@@ -1,22 +1,18 @@
 """Support for departure information for public transport in Munich."""
 
 import logging
+from datetime import datetime, tzinfo
 
-from mvg import MvgApi, TransportType, MvgApiError
-import voluptuous as vol
 
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
-from homeassistant.components.sensor.const import SensorStateClass, SensorDeviceClass
-from homeassistant.const import CONF_NAME, UnitOfTime
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor.const import SensorStateClass
+from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.exceptions import ConfigEntryError
 
 from .const import CONF_LINES, CONF_STATION_NAME, DOMAIN
 
@@ -66,14 +62,14 @@ class MvgEntity(CoordinatorEntity, SensorEntity):
         for departure in self.departures:
             formatted_departures.append(
                 {
-                    "planned": departure.minutes_until_planned_departure(),
-                    "real": departure.minutes_until_real_departure(),
+                    "planned": _get_minutes_until_departure(departure.time),
+                    "real": _get_minutes_until_departure(departure.planned),
                     "destination": departure.destination,
                     "platform": departure.platform,
                     "realtime": departure.realtime,
                     "line": departure.line,
                     "cancelled": departure.cancelled,
-                    "transport_type": departure.transport_type.value[0],
+                    "transport_type": departure.transport_type,
                 }
             )
         return {"departures": formatted_departures}
@@ -132,3 +128,18 @@ class MvgLineDeparturesSensor(MvgEntity):
     @property
     def name(self) -> str:
         return f"{self.station_name}: {self.line_name}"
+
+
+def _get_minutes_until_departure(departure_time: int, tz: tzinfo | None = None) -> int:
+    """Calculate the time difference in minutes between the current time and a given departure time.
+
+    :param departure_time: unix timestamp of the departure time, in seconds
+    :param tz: optional timezone information
+
+    :return: the time difference in whole minutes
+
+    """
+    current_time = datetime.now(tz)
+    departure_datetime = datetime.fromtimestamp(departure_time, tz)
+    time_difference = (departure_datetime - current_time).total_seconds()
+    return int(time_difference / 60.0)

@@ -5,8 +5,12 @@
         "title": "Add new station",
         "data": {
           "station_name": "Station name",
-          "timeoffset": "Time offset (e.g. walking time to station)"
+          "timeoffset": "Time offset (e.g. walking time to station)",
+          "limit": "Maximum Number of departures to load"
         }
+      },
+      "select_lines": {
+        "title": "Select lines for station"
       }
     }
   }
