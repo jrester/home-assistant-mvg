@@ -1,31 +1,31 @@
-from collections import defaultdict
 import logging
+from collections import defaultdict
 from typing import Any
 
+import voluptuous as vol
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    OptionsFlow,
+    SubentryFlowResult,
+)
+from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.core import callback
-from homeassistant.config_entries import (
-    ConfigFlow,
-    ConfigEntry,
-    SubentryFlowResult,
-    OptionsFlow,
-)
-import voluptuous as vol
 
 from mvg import MvgApi, TransportType
 
 from .const import (
-    CONF_LINES,
-    DOMAIN,
-    CONF_STATION_NAME,
-    CONF_STATION_ID,
-    CONF_TIME_OFFSET,
     CONF_LIMIT,
+    CONF_LINES,
+    CONF_STATION_ID,
+    CONF_STATION_NAME,
+    CONF_TIME_OFFSET,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -108,9 +108,7 @@ class MvgConfgFlow(ConfigFlow, domain=DOMAIN):
 
     @classmethod
     @callback
-    def async_get_options_flow(
-        cls, config_entry: ConfigEntry
-    ) -> "MvgOptionsFlowHandler":
+    def async_get_options_flow(cls, config_entry: ConfigEntry) -> MvgOptionsFlowHandler:
         return MvgOptionsFlowHandler()
 
 

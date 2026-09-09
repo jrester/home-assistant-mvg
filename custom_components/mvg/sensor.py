@@ -1,18 +1,18 @@
 """Support for departure information for public transport in Munich."""
 
 import logging
-from datetime import datetime, tzinfo
 
-
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorStateClass
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+)
 
 from .const import CONF_LINES, CONF_STATION_NAME, DOMAIN
 
@@ -62,8 +62,8 @@ class MvgEntity(CoordinatorEntity, SensorEntity):
         for departure in self.departures:
             formatted_departures.append(
                 {
-                    "planned": _get_minutes_until_departure(departure.time),
-                    "real": _get_minutes_until_departure(departure.planned),
+                    "planned": departure.minutes_until_planned_departure(),
+                    "real": departure.minutes_until_real_departure(),
                     "destination": departure.destination,
                     "platform": departure.platform,
                     "realtime": departure.realtime,
@@ -128,18 +128,3 @@ class MvgLineDeparturesSensor(MvgEntity):
     @property
     def name(self) -> str:
         return f"{self.station_name}: {self.line_name}"
-
-
-def _get_minutes_until_departure(departure_time: int, tz: tzinfo | None = None) -> int:
-    """Calculate the time difference in minutes between the current time and a given departure time.
-
-    :param departure_time: unix timestamp of the departure time, in seconds
-    :param tz: optional timezone information
-
-    :return: the time difference in whole minutes
-
-    """
-    current_time = datetime.now(tz)
-    departure_datetime = datetime.fromtimestamp(departure_time, tz)
-    time_difference = (departure_datetime - current_time).total_seconds()
-    return int(time_difference / 60.0)

@@ -1,24 +1,19 @@
+from dataclasses import dataclass
+import time
 from typing import Any, Self
 
-from dataclasses import dataclass
-from datetime import datetime
 
-
-def _get_minutes_until_departure(departure_time: int) -> int:
+def _minutes_until_departure(departure_time: int) -> int:
     """Calculate the time difference in minutes between the current time and a given departure time.
 
     Args:
         departure_time: Unix timestamp of the departure time, in seconds.
 
     Returns:
-        The time difference in minutes, as a float.
+        The time difference in whole minutes, never below 0.
 
     """
-    current_time = datetime.now()
-    departure_datetime = datetime.fromtimestamp(departure_time)
-    time_difference = (departure_datetime - current_time).total_seconds()
-    minutes_difference = int(time_difference / 60.0)
-    return minutes_difference
+    return max(0, int((departure_time - time.time()) / 60.0))
 
 
 @dataclass
@@ -35,10 +30,10 @@ class MvgDepartureInfo:
     messages: list[str]
 
     def minutes_until_planned_departure(self) -> int:
-        return _get_minutes_until_departure(self.planned)
+        return _minutes_until_departure(self.planned)
 
     def minutes_until_real_departure(self) -> int:
-        return _get_minutes_until_departure(self.time)
+        return _minutes_until_departure(self.time)
 
     @classmethod
     def from_dict(cls, raw_departure_info: dict[str, Any]) -> Self:
